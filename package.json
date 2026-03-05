@@ -1,0 +1,19 @@
+{
+  "name": "openclaw-agent-ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/server",
+    "apps/web"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev -w @openclaw-ui/server\" \"npm run dev -w @openclaw-ui/web\"",
+    "build": "npm run build -w @openclaw-ui/server && npm run build -w @openclaw-ui/web",
+    "test": "npm run test -w @openclaw-ui/server",
+    "lint": "npm run lint -w @openclaw-ui/web"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
