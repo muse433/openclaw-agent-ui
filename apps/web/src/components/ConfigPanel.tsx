@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "../lib/api";
 
+type ConfigSubTab = "editor" | "schema" | "quick";
+
 function safeModelList(data: unknown): string[] {
   if (!data || typeof data !== "object") {
     return [];
@@ -31,7 +33,7 @@ function parseRestartDelayMs(value: string): number | undefined {
   return Math.floor(parsed);
 }
 
-export function ConfigPanel() {
+export function ConfigPanel({ subTab }: { subTab: ConfigSubTab }) {
   const queryClient = useQueryClient();
 
   const configQuery = useQuery({
@@ -230,144 +232,153 @@ export function ConfigPanel() {
     () => JSON.stringify(schemaQuery.data?.schema ?? {}, null, 2),
     [schemaQuery.data?.schema],
   );
+  const showEditor = subTab === "editor";
+  const showSchema = subTab === "schema";
+  const showQuick = subTab === "quick";
 
   return (
     <div className="panel-grid">
-      <section className="card">
-        <div className="card-title">
-          <h2>Config 原始编辑</h2>
-          <p className="card-desc">支持 set/patch/apply 三种写入方式</p>
-        </div>
-        <div className="meta-row">
-          <span>hash: {configQuery.data?.hash ?? "-"}</span>
-          <span>path: {configQuery.data?.path ?? "-"}</span>
-        </div>
-        {editorError ? <p className="error-text">{editorError}</p> : null}
-        <textarea
-          value={rawEditor}
-          onChange={(event) => setRawEditor(event.target.value)}
-          rows={16}
-        />
-        <div className="form-grid inline">
-          <label>
-            sessionKey
-            <input
-              value={sessionKey}
-              onChange={(event) => setSessionKey(event.target.value)}
-              placeholder="可选"
-            />
-          </label>
-          <label>
-            note
-            <input value={note} onChange={(event) => setNote(event.target.value)} placeholder="可选" />
-          </label>
-          <label>
-            restartDelayMs
-            <input
-              value={restartDelayMs}
-              onChange={(event) => setRestartDelayMs(event.target.value)}
-              placeholder="可选，单位毫秒"
-            />
-          </label>
-        </div>
-        <div className="button-row">
-          <button type="button" onClick={onSet} disabled={setMutation.isPending}>
-            config.set
-          </button>
-          <button type="button" onClick={onPatch} disabled={patchMutation.isPending}>
-            config.patch
-          </button>
-          <button type="button" onClick={onApply} disabled={applyMutation.isPending}>
-            config.apply
-          </button>
-          <button type="button" className="secondary" onClick={onFormatConfig}>
-            格式化 JSON
-          </button>
-          <button
-            type="button"
-            className="secondary"
-            onClick={() => configQuery.refetch()}
-            disabled={configQuery.isFetching}
-          >
-            刷新配置
-          </button>
-        </div>
-      </section>
-
-      <section className="card">
-        <div className="card-title">
-          <h2>Schema 预览</h2>
-          <p className="card-desc">用于确认可编辑字段与约束定义</p>
-        </div>
-        <div className="meta-row">
-          <span>version: {schemaQuery.data?.version ?? "-"}</span>
-          <span>generatedAt: {schemaQuery.data?.generatedAt ?? "-"}</span>
-        </div>
-        <pre className="pre-block">{schemaString}</pre>
-      </section>
-
-      <section className="card full-span">
-        <div className="card-title">
-          <h2>Agent 快捷配置（Model + SOUL）</h2>
-          <p className="card-desc">一键同步模型与人格文件内容</p>
-        </div>
-        <div className="form-grid inline">
-          <label>
-            Agent
-            <select
-              value={selectedAgentId}
-              onChange={(event) => setSelectedAgentId(event.target.value)}
+      {showEditor ? (
+        <section className="card full-span">
+          <div className="card-title">
+            <h2>Config 原始编辑</h2>
+            <p className="card-desc">支持 set/patch/apply 三种写入方式</p>
+          </div>
+          <div className="meta-row">
+            <span>hash: {configQuery.data?.hash ?? "-"}</span>
+            <span>path: {configQuery.data?.path ?? "-"}</span>
+          </div>
+          {editorError ? <p className="error-text">{editorError}</p> : null}
+          <textarea
+            value={rawEditor}
+            onChange={(event) => setRawEditor(event.target.value)}
+            rows={16}
+          />
+          <div className="form-grid inline">
+            <label>
+              sessionKey
+              <input
+                value={sessionKey}
+                onChange={(event) => setSessionKey(event.target.value)}
+                placeholder="可选"
+              />
+            </label>
+            <label>
+              note
+              <input value={note} onChange={(event) => setNote(event.target.value)} placeholder="可选" />
+            </label>
+            <label>
+              restartDelayMs
+              <input
+                value={restartDelayMs}
+                onChange={(event) => setRestartDelayMs(event.target.value)}
+                placeholder="可选，单位毫秒"
+              />
+            </label>
+          </div>
+          <div className="button-row">
+            <button type="button" onClick={onSet} disabled={setMutation.isPending}>
+              config.set
+            </button>
+            <button type="button" onClick={onPatch} disabled={patchMutation.isPending}>
+              config.patch
+            </button>
+            <button type="button" onClick={onApply} disabled={applyMutation.isPending}>
+              config.apply
+            </button>
+            <button type="button" className="secondary" onClick={onFormatConfig}>
+              格式化 JSON
+            </button>
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => configQuery.refetch()}
+              disabled={configQuery.isFetching}
             >
-              {(agentsQuery.data?.agents ?? []).map((agent) => (
-                <option key={agent.id} value={agent.id}>
-                  {agent.name || agent.id}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Model（可选）
-            <input
-              list="quick-model-options"
-              value={agentModel}
-              onChange={(event) => setAgentModel(event.target.value)}
-              placeholder="留空表示不改 model"
-            />
-            <datalist id="quick-model-options">
-              {modelOptions.map((model) => (
-                <option key={model} value={model} />
-              ))}
-            </datalist>
-          </label>
-          <label>
-            文件
-            <select
-              value={soulFileName}
-              onChange={(event) => setSoulFileName(event.target.value)}
+              刷新配置
+            </button>
+          </div>
+        </section>
+      ) : null}
+
+      {showSchema ? (
+        <section className="card full-span">
+          <div className="card-title">
+            <h2>Schema 预览</h2>
+            <p className="card-desc">用于确认可编辑字段与约束定义</p>
+          </div>
+          <div className="meta-row">
+            <span>version: {schemaQuery.data?.version ?? "-"}</span>
+            <span>generatedAt: {schemaQuery.data?.generatedAt ?? "-"}</span>
+          </div>
+          <pre className="pre-block">{schemaString}</pre>
+        </section>
+      ) : null}
+
+      {showQuick ? (
+        <section className="card full-span">
+          <div className="card-title">
+            <h2>Agent 快捷配置（Model + SOUL）</h2>
+            <p className="card-desc">一键同步模型与人格文件内容</p>
+          </div>
+          <div className="form-grid inline">
+            <label>
+              Agent
+              <select
+                value={selectedAgentId}
+                onChange={(event) => setSelectedAgentId(event.target.value)}
+              >
+                {(agentsQuery.data?.agents ?? []).map((agent) => (
+                  <option key={agent.id} value={agent.id}>
+                    {agent.name || agent.id}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Model（可选）
+              <input
+                list="quick-model-options"
+                value={agentModel}
+                onChange={(event) => setAgentModel(event.target.value)}
+                placeholder="留空表示不改 model"
+              />
+              <datalist id="quick-model-options">
+                {modelOptions.map((model) => (
+                  <option key={model} value={model} />
+                ))}
+              </datalist>
+            </label>
+            <label>
+              文件
+              <select
+                value={soulFileName}
+                onChange={(event) => setSoulFileName(event.target.value)}
+              >
+                {(filesQuery.data?.files ?? []).map((file) => (
+                  <option key={file.name} value={file.name}>
+                    {file.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <textarea
+            value={soulContent}
+            onChange={(event) => setSoulContent(event.target.value)}
+            rows={14}
+          />
+          <div className="button-row">
+            <button
+              type="button"
+              onClick={onSaveQuickConfig}
+              disabled={quickSaveMutation.isPending || !selectedAgentId}
             >
-              {(filesQuery.data?.files ?? []).map((file) => (
-                <option key={file.name} value={file.name}>
-                  {file.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <textarea
-          value={soulContent}
-          onChange={(event) => setSoulContent(event.target.value)}
-          rows={14}
-        />
-        <div className="button-row">
-          <button
-            type="button"
-            onClick={onSaveQuickConfig}
-            disabled={quickSaveMutation.isPending || !selectedAgentId}
-          >
-            保存 Agent 配置
-          </button>
-        </div>
-      </section>
+              保存 Agent 配置
+            </button>
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }
